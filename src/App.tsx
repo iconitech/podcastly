@@ -9,6 +9,7 @@ import Episodes from './pages/Episodes';
 import Podcasts from './pages/Podcasts';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import ScrollToTop from './components/ScrollToTop';
 
 function ScrollToSection() {
   const location = useLocation();
@@ -27,6 +28,7 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen bg-black text-white flex flex-col">
+        <ScrollToTop />
         <ScrollToSection />
         <Navbar />
         <div className="flex-1">
