@@ -29,7 +29,7 @@ export default function Episodes() {
         <Button
           variant="ghost"
           className="mb-8 hover:bg-neutral-800"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/podcasts")}
         >
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to podcasts
         </Button>
