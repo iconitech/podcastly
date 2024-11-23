@@ -6,12 +6,15 @@ import {
   Sheet,
   SheetContent,
   SheetTrigger,
+  SheetClose,
 } from "@/components/ui/sheet";
 import { Mic2 } from "lucide-react";
+import { useState } from "react";
 
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isOpen, setIsOpen] = useState(false);
 
   const scrollToSection = (sectionId: string) => {
     if (location.pathname !== '/') {
@@ -20,6 +23,12 @@ export default function Navbar() {
       const element = document.getElementById(sectionId);
       element?.scrollIntoView({ behavior: 'smooth' });
     }
+    setIsOpen(false);
+  };
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
+    setIsOpen(false);
   };
 
   const navItems = [
@@ -66,13 +75,13 @@ export default function Navbar() {
           <Button 
             variant="ghost" 
             className="text-sm hover:text-green-500"
-            onClick={() => navigate('/login')}
+            onClick={() => handleNavigation('/login')}
           >
             Log in
           </Button>
           <Button 
             className="bg-green-500 hover:bg-green-600 text-black"
-            onClick={() => navigate('/signup')}
+            onClick={() => handleNavigation('/signup')}
           >
             Sign up
           </Button>
@@ -80,7 +89,7 @@ export default function Navbar() {
 
         {/* Mobile Menu */}
         <div className="md:hidden">
-          <Sheet>
+          <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
                 <Menu className="h-6 w-6" />
@@ -94,6 +103,7 @@ export default function Navbar() {
                       <Link
                         to={item.href}
                         className="block py-2 text-lg hover:text-green-500 transition-colors"
+                        onClick={() => setIsOpen(false)}
                       >
                         {item.label}
                       </Link>
@@ -111,13 +121,13 @@ export default function Navbar() {
                   <Button 
                     variant="ghost" 
                     className="w-full justify-start text-lg hover:text-green-500"
-                    onClick={() => navigate('/login')}
+                    onClick={() => handleNavigation('/login')}
                   >
                     Log in
                   </Button>
                   <Button 
                     className="w-full justify-start text-lg bg-green-500 hover:bg-green-600 text-black"
-                    onClick={() => navigate('/signup')}
+                    onClick={() => handleNavigation('/signup')}
                   >
                     Sign up
                   </Button>
