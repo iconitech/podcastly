@@ -16,11 +16,11 @@ export default function PricingSection() {
             <ul className="space-y-4 mb-8">
               <li className="flex items-center">
                 <Check className="h-5 w-5 text-green-500 mr-2" />
-                <span>5 podcast summaries per month</span>
+                <span>2 podcast summaries per month</span>
               </li>
               <li className="flex items-center">
                 <Check className="h-5 w-5 text-green-500 mr-2" />
-                <span>Access to top 4 NFL podcasts</span>
+                <span>Access to top NFL podcasts</span>
               </li>
               <li className="flex items-center">
                 <Check className="h-5 w-5 text-green-500 mr-2" />
@@ -39,7 +39,7 @@ export default function PricingSection() {
               RECOMMENDED
             </div>
             <h3 className="text-2xl font-bold mb-4">Premium</h3>
-            <p className="text-4xl font-bold mb-6">$9.99<span className="text-lg text-neutral-400">/month</span></p>
+            <p className="text-4xl font-bold mb-6">$29.99<span className="text-lg text-neutral-400">/month</span></p>
             
             <ul className="space-y-4 mb-8">
               <li className="flex items-center">
