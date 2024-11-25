@@ -37,7 +37,7 @@ export default function Podcasts() {
       <div className="container mx-auto">
         <h1 className="text-4xl font-bold mb-4">NFL Podcasts</h1>
         <p className="text-xl text-neutral-400 mb-12">
-          Get AI-powered summaries from the best NFL podcasts.
+          Get AI-powered summaries from the best NFL podcasts in seconds.
         </p>
 
         <div className="grid gap-12">
