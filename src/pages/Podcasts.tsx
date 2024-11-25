@@ -1,11 +1,36 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { topPodcasts } from "@/data/podcasts";
-import { Clock } from "lucide-react";
+import { Clock, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { usePodcastFeed } from "@/hooks/usePodcastFeed";
+import { formatDistanceToNow, formatDuration } from "@/lib/utils";
+import { useState } from "react";
+import SummaryDialog from "@/components/SummaryDialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Podcasts() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [selectedEpisode, setSelectedEpisode] = useState<{
+    podcastId: string;
+    episodeId: string;
+    title: string;
+    content: string;
+  } | null>(null);
+
+  const handleGetSummary = (podcastId: string, episode: any) => {
+    if (!user) {
+      navigate('/login', { state: { from: location } });
+      return;
+    }
+    
+    setSelectedEpisode({
+      podcastId,
+      episodeId: episode.guid,
+      title: episode.title,
+      content: episode.contentSnippet,
+    });
+  };
 
   return (
     <div className="pt-24 px-4 pb-16">
@@ -16,59 +41,96 @@ export default function Podcasts() {
         </p>
 
         <div className="grid gap-12">
-          {topPodcasts.map((podcast) => (
-            <div key={podcast.id} className="bg-neutral-900 rounded-lg p-6 border border-neutral-800">
-              <div className="flex flex-col md:flex-row gap-8 mb-8">
-                <img
-                  src={podcast.imageUrl}
-                  alt={podcast.title}
-                  className="w-48 h-48 object-cover rounded-lg"
-                />
-                <div>
-                  <h2 className="text-2xl font-bold mb-2">{podcast.title}</h2>
-                  <p className="text-lg text-neutral-400 mb-4">{podcast.host}</p>
-                  <p className="text-neutral-400 max-w-2xl mb-6">{podcast.description}</p>
-                  <Button 
-                    onClick={() => navigate(`/podcasts/${podcast.id}`)}
-                    className="bg-green-500 hover:bg-green-600 text-black"
-                  >
-                    View all episodes
-                  </Button>
+          {topPodcasts.map((podcast) => {
+            const { feed, isLoading, error } = usePodcastFeed(podcast.id, podcast.feedUrl);
+            
+            return (
+              <div key={podcast.id} className="bg-neutral-900 rounded-lg p-6 border border-neutral-800">
+                <div className="flex flex-col md:flex-row gap-8 mb-8">
+                  <img
+                    src={feed?.image?.url || podcast.imageUrl}
+                    alt={podcast.title}
+                    className="w-48 h-48 object-cover rounded-lg"
+                  />
+                  <div>
+                    <h2 className="text-2xl font-bold mb-2">{podcast.title}</h2>
+                    <p className="text-lg text-neutral-400 mb-4">{podcast.host}</p>
+                    <p className="text-neutral-400 max-w-2xl mb-6">
+                      {feed?.description || podcast.description}
+                    </p>
+                    <Button 
+                      onClick={() => navigate(`/podcasts/${podcast.id}`)}
+                      className="bg-green-500 hover:bg-green-600 text-black"
+                    >
+                      View all episodes
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-neutral-400">Latest Episodes</h3>
+                  
+                  {isLoading && (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+                    </div>
+                  )}
+
+                  {error && (
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+                      <div className="flex items-center text-red-500 mb-2">
+                        <AlertCircle className="h-5 w-5 mr-2" />
+                        <h3 className="font-semibold">Error loading episodes</h3>
+                      </div>
+                      <p className="text-neutral-400">Please try again later.</p>
+                    </div>
+                  )}
+
+                  {feed?.items?.slice(0, 2).map((episode) => (
+                    <div
+                      key={episode.guid}
+                      className="bg-neutral-800/50 rounded-lg p-4 hover:bg-neutral-800 transition-colors"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h4 className="font-medium mb-1">{episode.title}</h4>
+                          <p className="text-sm text-neutral-400 line-clamp-2">
+                            {episode.contentSnippet}
+                          </p>
+                        </div>
+                        <Button 
+                          size="sm"
+                          className="bg-neutral-700 hover:bg-neutral-600 ml-4"
+                          onClick={() => handleGetSummary(podcast.id, episode)}
+                        >
+                          Get Summary
+                        </Button>
+                      </div>
+                      <div className="flex items-center text-sm text-neutral-400">
+                        <span>{formatDistanceToNow(new Date(episode.pubDate))} ago</span>
+                        <span className="mx-2">•</span>
+                        <Clock className="h-4 w-4 mr-1" />
+                        <span>{formatDuration(episode.itunes.duration)}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-neutral-400">Latest Episodes</h3>
-                {podcast.episodes.slice(0, 3).map((episode) => (
-                  <div
-                    key={episode.id}
-                    className="bg-neutral-800/50 rounded-lg p-4 hover:bg-neutral-800 transition-colors"
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h4 className="font-medium mb-1">{episode.title}</h4>
-                        <p className="text-sm text-neutral-400 line-clamp-2">{episode.description}</p>
-                      </div>
-                      <Button 
-                        size="sm"
-                        className="bg-neutral-700 hover:bg-neutral-600 ml-4"
-                      >
-                        Get Summary
-                      </Button>
-                    </div>
-                    <div className="flex items-center text-sm text-neutral-400">
-                      <span>{episode.date}</span>
-                      <span className="mx-2">•</span>
-                      <Clock className="h-4 w-4 mr-1" />
-                      <span>{episode.duration}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
+
+      {selectedEpisode && (
+        <SummaryDialog
+          isOpen={true}
+          onClose={() => setSelectedEpisode(null)}
+          podcastId={selectedEpisode.podcastId}
+          episodeId={selectedEpisode.episodeId}
+          episodeTitle={selectedEpisode.title}
+          episodeContent={selectedEpisode.content}
+        />
+      )}
     </div>
   );
 }

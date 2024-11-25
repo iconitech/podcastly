@@ -4,81 +4,40 @@ export interface Podcast {
   host: string;
   description: string;
   imageUrl: string;
-  episodes: Episode[];
-}
-
-export interface Episode {
-  id: string;
-  title: string;
-  date: string;
-  duration: string;
-  description: string;
+  feedUrl: string;
 }
 
 export const topPodcasts: Podcast[] = [
   {
-    id: "around-the-nfl",
-    title: "Around the NFL",
-    host: "Dan Hanzus, Gregg Rosenthal, and Marc Sessler",
-    description: "NFL.com's official podcast covering the latest news, analysis, and game breakdowns.",
+    id: "pat-mcafee",
+    title: "The Pat McAfee Show",
+    host: "Pat McAfee",
+    description: "Former NFL punter Pat McAfee delivers his hot takes on sports news and events. A mix of football analysis, humor, and interviews with top NFL personalities.",
     imageUrl: "https://images.unsplash.com/photo-1642059870522-bb7a747cb4b1?q=80&w=600&h=600&auto=format&fit=crop",
-    episodes: [
-      {
-        id: "atn-1",
-        title: "2024 Super Bowl LVIII Recap",
-        date: "2024-02-12",
-        duration: "1h 25m",
-        description: "Complete analysis of the Chiefs vs 49ers Super Bowl matchup"
-      },
-      // More episodes can be added here
-    ]
+    feedUrl: "https://feeds.megaphone.fm/ESP7297553965"
   },
   {
     id: "pff-nfl",
-    title: "PFF NFL Podcast",
+    title: "The PFF NFL Podcast",
     host: "Sam Monson & Steve Palazzolo",
-    description: "Deep dive analytics and advanced stats from Pro Football Focus experts.",
+    description: "Deep dive analytics and advanced stats from Pro Football Focus experts, breaking down NFL games and players using PFF's unique data and grades.",
     imageUrl: "https://images.unsplash.com/photo-1566577739112-5180d4bf9390?q=80&w=600&h=600&auto=format&fit=crop",
-    episodes: [
-      {
-        id: "pff-1",
-        title: "Free Agency Preview 2024",
-        date: "2024-02-10",
-        duration: "58m",
-        description: "Breaking down the top free agents and their potential landing spots"
-      }
-    ]
+    feedUrl: "https://feeds.simplecast.com/U644ZfMt"
   },
   {
     id: "move-the-sticks",
-    title: "Move the Sticks",
+    title: "NFL: Move the Sticks",
     host: "Daniel Jeremiah & Bucky Brooks",
-    description: "Former NFL scouts break down prospects and analyze team building.",
+    description: "Former NFL scouts Daniel Jeremiah and Bucky Brooks break down the latest news and developments in the NFL, analyzing team needs and player evaluations.",
     imageUrl: "https://images.unsplash.com/photo-1631495634750-0c507026b3c8?q=80&w=600&h=600&auto=format&fit=crop",
-    episodes: [
-      {
-        id: "mts-1",
-        title: "2024 NFL Draft Top 50 Prospects",
-        date: "2024-02-09",
-        duration: "1h 15m",
-        description: "Complete breakdown of the top prospects in the upcoming draft"
-      }
-    ]
+    feedUrl: "https://omnycontent.com/d/playlist/e73c998e-6e60-432f-8610-ae210140c5b1/0E61FE66-E985-446F-BC46-AE27003599DA/C1B3EAA8-DB6B-4865-AC29-AE27003599F6/podcast.rss"
   },
   {
-    id: "the-athletic-nfl",
-    title: "The Athletic NFL Show",
-    host: "Robert Mays",
-    description: "In-depth analysis and interviews with NFL's top minds.",
+    id: "rich-eisen",
+    title: "The Rich Eisen Show",
+    host: "Rich Eisen",
+    description: "NFL Network's Rich Eisen brings his unique perspective to the world of sports, entertainment, and pop culture with celebrity interviews and football analysis.",
     imageUrl: "https://images.unsplash.com/photo-1624526267942-ab0ff8a3e972?q=80&w=600&h=600&auto=format&fit=crop",
-    episodes: [
-      {
-        id: "athletic-1",
-        title: "Offseason Team Needs Analysis",
-        date: "2024-02-08",
-        duration: "1h 05m",
-        description: "Breaking down each team's biggest needs heading into free agency"
-      }
-    ]
+    feedUrl: "https://feeds.megaphone.fm/WWO9698947413"
   }
 ];
