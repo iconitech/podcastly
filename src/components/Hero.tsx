@@ -16,7 +16,7 @@ export default function Hero() {
           Get instant summaries of your favorite NFL podcasts. Save time while staying informed.
         </p>
         
-        <Button onClick={() => navigate('/navigate')} className="bg-green-500 hover:bg-green-600 text-black text-lg px-8 py-6 rounded-full">
+        <Button onClick={() => navigate('/signup')} className="bg-green-500 hover:bg-green-600 text-black text-lg px-8 py-6 rounded-full">
           Try for free <ArrowRight className="ml-2" />
         </Button>
 
