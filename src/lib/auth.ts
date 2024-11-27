@@ -2,15 +2,10 @@ import { supabase } from './supabase';
 import type { AuthError, User } from '@supabase/supabase-js';
 
 export async function signInWithGoogle() {
-  const returnPath = window.location.pathname;
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
-      },
-      redirectTo: `${window.location.origin}/auth/callback?returnTo=${encodeURIComponent(returnPath)}`
+      redirectTo: `${window.location.origin}/auth/callback`
     }
   });
   
@@ -34,7 +29,7 @@ export async function getCurrentUser(): Promise<User | null> {
 
 export async function handleAuthCallback(): Promise<{ error: AuthError | null }> {
   try {
-    const { data, error } = await supabase.auth.exchangeCodeForSession(window.location.search);
+    const { data, error } = await supabase.auth.getSession();
     
     if (error) {
       console.error('Auth error:', error);
