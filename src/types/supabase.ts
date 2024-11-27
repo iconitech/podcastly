@@ -79,4 +79,4 @@ export interface PodcastFeed {
 }
 
 export type InsertPodcastFeed = Omit<PodcastFeed, 'id' | 'created_at'>
-export type UpdatePodcastFeed = Partial<InsertPodcastFeed></content>
+export type UpdatePodcastFeed = Partial<InsertPodcastFeed>
