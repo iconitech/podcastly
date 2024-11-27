@@ -138,6 +138,7 @@ export default function Podcasts() {
           episodeId={selectedEpisode.episodeId}
           episodeTitle={selectedEpisode.title}
           episodeContent={selectedEpisode.content}
+          audioUrl={selectedEpisode.audioUrl}
         />
       )}
     </div>

@@ -11,7 +11,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { getCurrentMonthCredits, incrementSummaryCount } from '@/lib/db/credits';
 import { createSummary, getEpisodeSummary } from '@/lib/db/summaries';
-import { generateSummary } from '@/lib/openai';
+import { processPodcastEpisode } from '@/lib/podcast-processor';
 import { AlertCircle, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -22,6 +22,7 @@ interface SummaryDialogProps {
   episodeId: string;
   episodeTitle: string;
   episodeContent: string;
+  audioUrl: string;
 }
 
 export default function SummaryDialog({
@@ -31,6 +32,7 @@ export default function SummaryDialog({
   episodeId,
   episodeTitle,
   episodeContent,
+  audioUrl,
 }: SummaryDialogProps) {
   const { user, profile } = useAuth();
   const { toast } = useToast();
@@ -65,28 +67,40 @@ export default function SummaryDialog({
         }
       }
 
-      // Generate new summary with streaming
-      await generateSummary({
-        title: episodeTitle,
-        content: episodeContent,
+      // Process the podcast episode with streaming
+      await processPodcastEpisode({
+        audioUrl,
         isPremium,
+        stream: true,
+        callbacks: {
+          onToken: (token) => {
+            setStreamedContent(prev => prev + token);
+          },
+          onComplete: async () => {
+            // Save summary
+            await createSummary({
+              user_id: user.id,
+              podcast_id: podcastId,
+              episode_id: episodeId,
+              summary_text: streamedContent,
+              key_points: null
+            });
+
+            // Increment usage count for free users
+            if (!isPremium) {
+              await incrementSummaryCount(user.id);
+            }
+
+            setSummary(streamedContent);
+            setIsLoading(false);
+          },
+          onError: (error) => {
+            console.error('Streaming error:', error);
+            setError('Failed to generate summary. Please try again later.');
+            setIsLoading(false);
+          }
+        }
       });
-
-      // Save summary
-      await createSummary({
-        user_id: user.id,
-        podcast_id: podcastId,
-        episode_id: episodeId,
-        summary_text: streamedContent,
-        key_points: null
-      });
-
-      // Increment usage count for free users
-      if (!isPremium) {
-        await incrementSummaryCount(user.id);
-      }
-
-      setSummary(streamedContent);
     } catch (err) {
       console.error('Error generating summary:', err);
       setError('Failed to generate summary. Please try again later.');
@@ -95,7 +109,6 @@ export default function SummaryDialog({
         title: "Error",
         description: "Failed to generate summary. Please try again later.",
       });
-    } finally {
       setIsLoading(false);
     }
   };
