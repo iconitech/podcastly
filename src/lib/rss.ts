@@ -5,9 +5,12 @@ export interface PodcastItem {
   pubDate: string;
   guid: string;
   contentSnippet: string;
-  audioUrl: string; // Add audioUrl field
+  audioUrl: string;
   itunes: {
     duration: string;
+    summary?: string;
+    explicit?: string;
+    image?: string;
   };
 }
 
@@ -20,6 +23,30 @@ export interface PodcastFeed {
 const CORS_PROXY = 'https://corsproxy.io/?';
 const MAX_EPISODES = 20;
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes in milliseconds
+
+function cleanText(text: string): string {
+  const div = document.createElement('div');
+  div.innerHTML = text;
+  return div.textContent || div.innerText || '';
+}
+
+function cleanDuration(duration: string): string {
+  // If duration is in seconds (numeric string)
+  if (/^\d+$/.test(duration)) {
+    const totalSeconds = parseInt(duration, 10);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  // If duration is already in HH:MM:SS or MM:SS format, return as is
+  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(duration)) {
+    return duration;
+  }
+
+  // Default to 0:00 if no valid format is found
+  return '0:00';
+}
 
 export async function getPodcastFeed(podcastId: string, feedUrl: string): Promise<PodcastFeed> {
   try {
@@ -36,10 +63,7 @@ export async function getPodcastFeed(podcastId: string, feedUrl: string): Promis
 
     if (!cacheError && cached?.feed_data && !shouldRefresh) {
       console.log('Using cached feed for podcast:', podcastId);
-      return {
-        ...cached.feed_data,
-        items: (cached.feed_data as PodcastFeed).items.slice(0, MAX_EPISODES)
-      } as PodcastFeed;
+      return cached.feed_data as PodcastFeed;
     }
 
     console.log('Fetching fresh feed for podcast:', podcastId);
@@ -54,26 +78,38 @@ export async function getPodcastFeed(podcastId: string, feedUrl: string): Promis
 
     // Parse feed
     const feed: PodcastFeed = {
-      description: xmlDoc.querySelector('channel > description')?.textContent || '',
+      description: cleanText(xmlDoc.querySelector('channel > description')?.textContent || ''),
       image: {
         url: xmlDoc.querySelector('channel > image > url')?.textContent || 
              xmlDoc.querySelector('channel > itunes\\:image')?.getAttribute('href') || ''
       },
       items: Array.from(xmlDoc.querySelectorAll('item'))
         .slice(0, MAX_EPISODES)
-        .map(item => ({
-          title: item.querySelector('title')?.textContent || '',
-          pubDate: item.querySelector('pubDate')?.textContent || '',
-          guid: item.querySelector('guid')?.textContent || '',
-          contentSnippet: item.querySelector('description')?.textContent || '',
-          audioUrl: item.querySelector('enclosure')?.getAttribute('url') || '', // Extract audio URL
-          itunes: {
-            duration: item.querySelector('itunes\\:duration')?.textContent || ''
-          }
-        }))
+        .map(item => {
+          // Get duration using getElementsByTagName for better namespace handling
+          const durationElement = item.getElementsByTagName('itunes:duration')[0];
+          const duration = durationElement?.textContent?.trim() || '0';
+
+          return {
+            title: cleanText(item.querySelector('title')?.textContent || ''),
+            pubDate: item.querySelector('pubDate')?.textContent || '',
+            guid: item.querySelector('guid')?.textContent?.trim() || '',
+            contentSnippet: cleanText(
+              item.querySelector('description')?.textContent || 
+              item.querySelector('content\\:encoded')?.textContent || ''
+            ),
+            audioUrl: item.querySelector('enclosure')?.getAttribute('url') || '',
+            itunes: {
+              duration: cleanDuration(duration),
+              summary: cleanText(item.querySelector('itunes\\:summary')?.textContent || ''),
+              explicit: item.querySelector('itunes\\:explicit')?.textContent || 'no',
+              image: item.querySelector('itunes\\:image')?.getAttribute('href') || ''
+            }
+          };
+        })
     };
 
-    // Update cache with ON CONFLICT DO UPDATE
+    // Update cache
     const { error: upsertError } = await supabase
       .from('podcast_feeds')
       .upsert({
@@ -86,8 +122,6 @@ export async function getPodcastFeed(podcastId: string, feedUrl: string): Promis
 
     if (upsertError) {
       console.error('Error updating feed cache:', upsertError);
-    } else {
-      console.log('Successfully cached feed for podcast:', podcastId);
     }
 
     return feed;

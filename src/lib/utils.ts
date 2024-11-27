@@ -31,42 +31,27 @@ export function formatDistanceToNow(date: Date): string {
 export function formatDuration(duration: string): string {
   // If duration is in seconds (numeric string)
   if (/^\d+$/.test(duration)) {
-    const seconds = parseInt(duration, 10);
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainingSeconds = seconds % 60;
+    const totalSeconds = parseInt(duration, 10);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
 
     if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 
-  // If duration is already in HH:MM:SS or MM:SS format, return as is
-  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(duration)) {
+  // If duration is already in HH:MM:SS format, return as is
+  if (/^\d{1,2}:\d{2}:\d{2}$/.test(duration)) {
     return duration;
   }
 
-  // For any other format, try to parse the duration
-  const durationParts = duration.match(/(\d+)\s*(h|hr|hour|hours|m|min|minute|minutes|s|sec|second|seconds)/gi);
-  if (!durationParts) return duration;
-
-  let totalSeconds = 0;
-  durationParts.forEach(part => {
-    const [value, unit] = part.toLowerCase().match(/(\d+)|([a-z]+)/g) || [];
-    if (value && unit) {
-      if (unit.startsWith('h')) totalSeconds += parseInt(value) * 3600;
-      else if (unit.startsWith('m')) totalSeconds += parseInt(value) * 60;
-      else if (unit.startsWith('s')) totalSeconds += parseInt(value);
-    }
-  });
-
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  // If duration is in MM:SS format, return as is
+  if (/^\d{1,2}:\d{2}$/.test(duration)) {
+    return duration;
   }
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+  // Default to 0:00 if no valid format is found
+  return '0:00';
 }

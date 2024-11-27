@@ -21,19 +21,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
+    let mounted = true;
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      
       setUser(session?.user ?? null);
       if (session?.user) {
         getProfile(session.user.id)
-          .then(setProfile)
-          .catch(console.error);
+          .then(profile => {
+            if (mounted) {
+              setProfile(profile);
+            }
+          })
+          .catch(console.error)
+          .finally(() => {
+            if (mounted) {
+              setIsLoading(false);
+            }
+          });
+      } else {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+
       setUser(session?.user ?? null);
       
       if (event === 'SIGNED_IN' && session?.user) {
@@ -45,11 +61,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } else if (event === 'SIGNED_OUT') {
         setProfile(null);
-        navigate('/');
+        navigate('/', { replace: true });
       }
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, [navigate]);
@@ -62,6 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await supabase.auth.signOut();
       setUser(null);
       setProfile(null);
+      navigate('/', { replace: true });
     },
   };
 
