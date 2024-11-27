@@ -11,7 +11,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { getCurrentMonthCredits, incrementSummaryCount } from '@/lib/db/credits';
 import { createSummary, getEpisodeSummary } from '@/lib/db/summaries';
-import { processPodcastEpisode } from '@/lib/podcast-processor';
+import { generateSummary } from '@/lib/openai';
 import { AlertCircle, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -22,7 +22,6 @@ interface SummaryDialogProps {
   episodeId: string;
   episodeTitle: string;
   episodeContent: string;
-  audioUrl: string;
 }
 
 export default function SummaryDialog({
@@ -32,14 +31,12 @@ export default function SummaryDialog({
   episodeId,
   episodeTitle,
   episodeContent,
-  audioUrl,
 }: SummaryDialogProps) {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [progress, setProgress] = useState(0);
   const [streamedContent, setStreamedContent] = useState('');
 
   const isPremium = profile?.subscription_tier === 'premium';
@@ -51,7 +48,6 @@ export default function SummaryDialog({
       setIsLoading(true);
       setError(null);
       setStreamedContent('');
-      setProgress(0);
 
       // Check if summary already exists
       const existingSummary = await getEpisodeSummary(user.id, episodeId);
@@ -69,60 +65,31 @@ export default function SummaryDialog({
         }
       }
 
-      // Process the episode
-      if (audioUrl) {
-        setProgress(10);
-        await processPodcastEpisode({
-          audioUrl,
-          isPremium,
-          stream: true,
-          callbacks: {
-            onToken: (token) => {
-              setStreamedContent(prev => prev + token);
-              setProgress(prev => Math.min(prev + 2, 90));
-            },
-            onComplete: async () => {
-              try {
-                setProgress(100);
-                // Save summary
-                await createSummary({
-                  user_id: user.id,
-                  podcast_id: podcastId,
-                  episode_id: episodeId,
-                  summary_text: streamedContent,
-                  key_points: streamedContent
-                });
+      // Generate new summary with streaming
+      await generateSummary({
+        title: episodeTitle,
+        content: episodeContent,
+        isPremium,
+      });
 
-                // Increment usage count for free users
-                if (!isPremium) {
-                  await incrementSummaryCount(user.id);
-                }
+      // Save summary
+      await createSummary({
+        user_id: user.id,
+        podcast_id: podcastId,
+        episode_id: episodeId,
+        summary_text: streamedContent,
+        key_points: null
+      });
 
-                setSummary(streamedContent);
-              } catch (err) {
-                console.error('Error saving summary:', err);
-                setError('Failed to save summary. Please try again.');
-                toast({
-                  variant: "destructive",
-                  title: "Error",
-                  description: "Failed to save summary. Please try again later.",
-                });
-              }
-            },
-            onError: (err) => {
-              setError(err.message);
-              toast({
-                variant: "destructive",
-                title: "Error",
-                description: err.message || "Failed to generate summary. Please try again later.",
-              });
-            }
-          }
-        });
+      // Increment usage count for free users
+      if (!isPremium) {
+        await incrementSummaryCount(user.id);
       }
+
+      setSummary(streamedContent);
     } catch (err) {
       console.error('Error generating summary:', err);
-      setError('Failed to generate summary. Please try again.');
+      setError('Failed to generate summary. Please try again later.');
       toast({
         variant: "destructive",
         title: "Error",
@@ -156,11 +123,11 @@ export default function SummaryDialog({
             </div>
             <p className="text-neutral-400">{error}</p>
           </div>
-        ) : summary ? (
+        ) : summary || streamedContent ? (
           <div className="space-y-4">
             <h3 className="font-semibold">{episodeTitle}</h3>
             <div className="prose prose-invert max-w-none">
-              {summary.split('\n').map((paragraph, index) => (
+              {(summary || streamedContent).split('\n').map((paragraph, index) => (
                 <p key={index} className="text-neutral-300">
                   {paragraph}
                 </p>
@@ -184,7 +151,7 @@ export default function SummaryDialog({
               {isLoading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2" />
-                  {progress > 0 ? `Processing... ${progress}%` : 'Generating...'}
+                  Generating...
                 </>
               ) : (
                 'Generate Summary'
