@@ -10,11 +10,16 @@ import {
 } from "@/components/ui/sheet";
 import { Mic2 } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { signOut } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const { user, profile } = useAuth();
+  const { toast } = useToast();
 
   const scrollToSection = (sectionId: string) => {
     if (location.pathname !== '/') {
@@ -29,6 +34,24 @@ export default function Navbar() {
   const handleNavigation = (path: string) => {
     navigate(path);
     setIsOpen(false);
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Signed out",
+        description: "You have been successfully signed out.",
+      });
+      navigate('/');
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to sign out. Please try again.",
+      });
+    }
   };
 
   const navItems = [
@@ -72,19 +95,45 @@ export default function Navbar() {
 
         {/* Desktop Auth Buttons */}
         <div className="hidden md:flex items-center space-x-4">
-          <Button 
-            variant="ghost" 
-            className="text-sm hover:text-green-500"
-            onClick={() => handleNavigation('/login')}
-          >
-            Log in
-          </Button>
-          <Button 
-            className="bg-green-500 hover:bg-green-600 text-black"
-            onClick={() => handleNavigation('/signup')}
-          >
-            Sign up
-          </Button>
+          {user ? (
+            <>
+              <span className="text-sm text-neutral-400">
+                Hi, {user.email}
+              </span>
+              {!profile?.subscription_tier || profile.subscription_tier === 'free' ? (
+                <Button 
+                  variant="outline"
+                  className="text-green-500 border-green-500 hover:bg-green-500 hover:text-black"
+                  onClick={() => scrollToSection('pricing')}
+                >
+                  Upgrade
+                </Button>
+              ) : null}
+              <Button 
+                variant="ghost" 
+                className="text-sm hover:text-green-500"
+                onClick={handleSignOut}
+              >
+                Sign out
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button 
+                variant="ghost" 
+                className="text-sm hover:text-green-500"
+                onClick={() => handleNavigation('/login')}
+              >
+                Log in
+              </Button>
+              <Button 
+                className="bg-green-500 hover:bg-green-600 text-black"
+                onClick={() => handleNavigation('/signup')}
+              >
+                Sign up
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Mobile Menu */}
@@ -118,19 +167,51 @@ export default function Navbar() {
                   </div>
                 ))}
                 <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-neutral-800">
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start text-lg hover:text-green-500"
-                    onClick={() => handleNavigation('/login')}
-                  >
-                    Log in
-                  </Button>
-                  <Button 
-                    className="w-full justify-start text-lg bg-green-500 hover:bg-green-600 text-black"
-                    onClick={() => handleNavigation('/signup')}
-                  >
-                    Sign up
-                  </Button>
+                  {user ? (
+                    <>
+                      <span className="text-sm text-neutral-400 py-2">
+                        Hi, {user.email}
+                      </span>
+                      {!profile?.subscription_tier || profile.subscription_tier === 'free' ? (
+                        <Button 
+                          variant="outline"
+                          className="w-full justify-start text-lg text-green-500 border-green-500 hover:bg-green-500 hover:text-black"
+                          onClick={() => {
+                            setIsOpen(false);
+                            scrollToSection('pricing');
+                          }}
+                        >
+                          Upgrade to Premium
+                        </Button>
+                      ) : null}
+                      <Button 
+                        variant="ghost" 
+                        className="w-full justify-start text-lg hover:text-green-500"
+                        onClick={() => {
+                          setIsOpen(false);
+                          handleSignOut();
+                        }}
+                      >
+                        Sign out
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button 
+                        variant="ghost" 
+                        className="w-full justify-start text-lg hover:text-green-500"
+                        onClick={() => handleNavigation('/login')}
+                      >
+                        Log in
+                      </Button>
+                      <Button 
+                        className="w-full justify-start text-lg bg-green-500 hover:bg-green-600 text-black"
+                        onClick={() => handleNavigation('/signup')}
+                      >
+                        Sign up
+                      </Button>
+                    </>
+                  )}
                 </div>
               </nav>
             </SheetContent>
