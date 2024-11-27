@@ -1,11 +1,10 @@
 import { useEffect } from 'react';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { handleAuthCallback } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AuthCallback() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
@@ -25,15 +24,16 @@ export default function AuthCallback() {
           return;
         }
 
-        // Get the return path from state or default to podcasts
-        const returnPath = searchParams.get('returnTo') || '/podcasts';
+        // Get the return path from query params or default to podcasts
+        const returnTo = searchParams.get('returnTo') || '/podcasts';
 
         toast({
           title: "Welcome!",
           description: "You have successfully signed in.",
         });
         
-        navigate(returnPath, { replace: true });
+        // Use replace to prevent back button from returning to callback page
+        navigate(returnTo, { replace: true });
       } catch (err) {
         console.error('Callback error:', err);
         toast({
