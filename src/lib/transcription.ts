@@ -13,8 +13,9 @@ export interface TranscriptionResult {
 
 export async function transcribeAudio({ audioUrl, language, prompt }: TranscriptionOptions): Promise<TranscriptionResult> {
   try {
-    // Fetch the audio file
-    const response = await fetch(audioUrl);
+    // Use CORS proxy for audio fetch
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(audioUrl)}`;
+    const response = await fetch(proxyUrl);
     if (!response.ok) {
       throw new Error('Failed to fetch audio file');
     }

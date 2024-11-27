@@ -4,11 +4,20 @@ import type { Summary } from '@/types/supabase';
 export async function createSummary(summary: Omit<Summary, 'id' | 'created_at'>) {
   const { data, error } = await supabase
     .from('summaries')
-    .insert(summary)
+    .insert({
+      ...summary,
+      // Ensure text is properly sanitized and encoded
+      summary_text: summary.summary_text.trim(),
+      // Add metadata to help with content type handling
+      key_points: null // Remove if not needed to simplify the request
+    })
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('Supabase error:', error);
+    throw error;
+  }
   return data;
 }
 
@@ -19,7 +28,10 @@ export async function getUserSummaries(userId: string) {
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    console.error('Supabase error:', error);
+    throw error;
+  }
   return data;
 }
 
@@ -31,6 +43,9 @@ export async function getEpisodeSummary(userId: string, episodeId: string) {
     .eq('episode_id', episodeId)
     .single();
 
-  if (error && error.code !== 'PGRST116') throw error; // PGRST116 is "not found"
+  if (error && error.code !== 'PGRST116') {
+    console.error('Supabase error:', error);
+    throw error;
+  }
   return data;
 }

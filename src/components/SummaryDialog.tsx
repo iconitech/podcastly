@@ -11,10 +11,9 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { getCurrentMonthCredits, incrementSummaryCount } from '@/lib/db/credits';
 import { createSummary, getEpisodeSummary } from '@/lib/db/summaries';
-import { AlertCircle, Sparkles, Play, Pause } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { processPodcastEpisode } from '@/lib/podcast-processor';
-import { Progress } from '@/components/ui/progress';
+import { AlertCircle, Sparkles } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface SummaryDialogProps {
   isOpen: boolean;
@@ -23,7 +22,7 @@ interface SummaryDialogProps {
   episodeId: string;
   episodeTitle: string;
   episodeContent: string;
-  audioUrl?: string;
+  audioUrl: string;
 }
 
 export default function SummaryDialog({
@@ -40,8 +39,8 @@ export default function SummaryDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [streamedContent, setStreamedContent] = useState<string>('');
   const [progress, setProgress] = useState(0);
+  const [streamedContent, setStreamedContent] = useState('');
 
   const isPremium = profile?.subscription_tier === 'premium';
 
@@ -83,28 +82,39 @@ export default function SummaryDialog({
               setProgress(prev => Math.min(prev + 2, 90));
             },
             onComplete: async () => {
-              setProgress(100);
-              // Save summary
-              await createSummary({
-                user_id: user.id,
-                podcast_id: podcastId,
-                episode_id: episodeId,
-                summary_text: streamedContent,
-              });
+              try {
+                setProgress(100);
+                // Save summary
+                await createSummary({
+                  user_id: user.id,
+                  podcast_id: podcastId,
+                  episode_id: episodeId,
+                  summary_text: streamedContent,
+                  key_points: streamedContent
+                });
 
-              // Increment usage count for free users
-              if (!isPremium) {
-                await incrementSummaryCount(user.id);
+                // Increment usage count for free users
+                if (!isPremium) {
+                  await incrementSummaryCount(user.id);
+                }
+
+                setSummary(streamedContent);
+              } catch (err) {
+                console.error('Error saving summary:', err);
+                setError('Failed to save summary. Please try again.');
+                toast({
+                  variant: "destructive",
+                  title: "Error",
+                  description: "Failed to save summary. Please try again later.",
+                });
               }
-
-              setSummary(streamedContent);
             },
             onError: (err) => {
               setError(err.message);
               toast({
                 variant: "destructive",
                 title: "Error",
-                description: "Failed to generate summary. Please try again later.",
+                description: err.message || "Failed to generate summary. Please try again later.",
               });
             }
           }
@@ -112,7 +122,7 @@ export default function SummaryDialog({
       }
     } catch (err) {
       console.error('Error generating summary:', err);
-      setError('Failed to generate summary. Please try again later.');
+      setError('Failed to generate summary. Please try again.');
       toast({
         variant: "destructive",
         title: "Error",
@@ -159,45 +169,27 @@ export default function SummaryDialog({
           </div>
         ) : (
           <div className="text-center py-8">
-            {isLoading ? (
-              <div className="space-y-4">
-                <Progress value={progress} className="w-full" />
-                <p className="text-sm text-neutral-400">
-                  {progress < 100 ? 'Generating summary...' : 'Almost done...'}
-                </p>
-                {streamedContent && (
-                  <div className="text-left mt-4 space-y-2">
-                    {streamedContent.split('\n').map((line, i) => (
-                      <p key={i} className="text-neutral-300">{line}</p>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <>
-                <Sparkles className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Ready to Generate Summary</h3>
-                <p className="text-neutral-400 mb-6">
-                  {isPremium
-                    ? "Get a detailed AI analysis of this episode's content"
-                    : "Get a quick overview of the main points"}
-                </p>
-                <Button
-                  onClick={handleGetSummary}
-                  disabled={isLoading}
-                  className="bg-green-500 hover:bg-green-600 text-black"
-                >
-                  {isLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2" />
-                      Generating...
-                    </>
-                  ) : (
-                    'Generate Summary'
-                  )}
-                </Button>
-              </>
-            )}
+            <Sparkles className="h-12 w-12 text-green-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Ready to Generate Summary</h3>
+            <p className="text-neutral-400 mb-6">
+              {isPremium
+                ? "Get a detailed AI analysis of this episode's content"
+                : "Get a quick overview of the main points"}
+            </p>
+            <Button
+              onClick={handleGetSummary}
+              disabled={isLoading}
+              className="bg-green-500 hover:bg-green-600 text-black"
+            >
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2" />
+                  {progress > 0 ? `Processing... ${progress}%` : 'Generating...'}
+                </>
+              ) : (
+                'Generate Summary'
+              )}
+            </Button>
           </div>
         )}
 

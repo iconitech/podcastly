@@ -49,7 +49,7 @@ export default function Podcasts() {
           Get AI-powered summaries from the best NFL podcasts.
         </p>
 
-        <div className="grid gap-8">
+        <div className="space-y-8">
           {topPodcasts.map((podcast) => {
             const { feed, isLoading, error } = usePodcastFeed(podcast.id, podcast.feedUrl);
             
@@ -101,15 +101,15 @@ export default function Podcasts() {
                       className="bg-neutral-800/50 rounded-lg p-4 hover:bg-neutral-800 transition-colors"
                     >
                       <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                        <div className="flex-1">
-                          <h4 className="font-medium mb-1">{episode.title}</h4>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium mb-1 truncate">{episode.title}</h4>
                           <p className="text-sm text-neutral-400 line-clamp-2">
                             {episode.contentSnippet}
                           </p>
                         </div>
                         <Button 
                           size="sm"
-                          className="w-full sm:w-auto bg-neutral-700 hover:bg-neutral-600"
+                          className="w-full sm:w-auto bg-neutral-700 hover:bg-neutral-600 shrink-0"
                           onClick={() => handleGetSummary(podcast.id, episode)}
                         >
                           Get Summary
