@@ -5,6 +5,7 @@ export interface PodcastItem {
   pubDate: string;
   guid: string;
   contentSnippet: string;
+  audioUrl: string; // Add audioUrl field
   itunes: {
     duration: string;
   };
@@ -18,22 +19,23 @@ export interface PodcastFeed {
 
 const CORS_PROXY = 'https://corsproxy.io/?';
 const MAX_EPISODES = 20;
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 export async function getPodcastFeed(podcastId: string, feedUrl: string): Promise<PodcastFeed> {
   try {
     // Try cache first
     const { data: cached, error: cacheError } = await supabase
       .from('podcast_feeds')
-      .select('feed_data')
+      .select('feed_data, last_fetched')
       .eq('podcast_id', podcastId)
       .single();
 
-    if (cacheError) {
-      console.log('Cache miss or error:', cacheError.message);
-    }
+    const now = new Date();
+    const shouldRefresh = !cached?.last_fetched || 
+      (now.getTime() - new Date(cached.last_fetched).getTime()) > CACHE_TTL;
 
-    if (cached?.feed_data) {
-      console.log('Cache hit for podcast:', podcastId);
+    if (!cacheError && cached?.feed_data && !shouldRefresh) {
+      console.log('Using cached feed for podcast:', podcastId);
       return {
         ...cached.feed_data,
         items: (cached.feed_data as PodcastFeed).items.slice(0, MAX_EPISODES)
@@ -64,19 +66,22 @@ export async function getPodcastFeed(podcastId: string, feedUrl: string): Promis
           pubDate: item.querySelector('pubDate')?.textContent || '',
           guid: item.querySelector('guid')?.textContent || '',
           contentSnippet: item.querySelector('description')?.textContent || '',
+          audioUrl: item.querySelector('enclosure')?.getAttribute('url') || '', // Extract audio URL
           itunes: {
             duration: item.querySelector('itunes\\:duration')?.textContent || ''
           }
         }))
     };
 
-    // Cache the feed
+    // Update cache with ON CONFLICT DO UPDATE
     const { error: upsertError } = await supabase
       .from('podcast_feeds')
       .upsert({
         podcast_id: podcastId,
         feed_data: feed,
-        last_fetched: new Date().toISOString()
+        last_fetched: now.toISOString()
+      }, {
+        onConflict: 'podcast_id'
       });
 
     if (upsertError) {

@@ -8,17 +8,20 @@ import { formatDistanceToNow, formatDuration } from "@/lib/utils";
 import { useState } from "react";
 import SummaryDialog from "@/components/SummaryDialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Episodes() {
   const { podcastId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
   
   const podcast = topPodcasts.find((p) => p.id === podcastId);
   const [selectedEpisode, setSelectedEpisode] = useState<{
     id: string;
     title: string;
     content: string;
+    audioUrl: string;
   } | null>(null);
   
   if (!podcast) {
@@ -38,7 +41,12 @@ export default function Episodes() {
 
   const handleGetSummary = (episode: any) => {
     if (!user) {
-      navigate('/login', { state: { from: location } });
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in or create an account to get episode summaries.",
+        variant: "destructive",
+      });
+      navigate('/login', { state: { from: `/podcasts/${podcastId}` } });
       return;
     }
     
@@ -46,6 +54,7 @@ export default function Episodes() {
       id: episode.guid,
       title: episode.title,
       content: episode.contentSnippet,
+      audioUrl: episode.audioUrl
     });
   };
 
@@ -60,14 +69,14 @@ export default function Episodes() {
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to podcasts
         </Button>
 
-        <div className="flex flex-col md:flex-row gap-8 mb-12">
+        <div className="flex flex-col md:flex-row gap-6 md:gap-8 mb-8 md:mb-12">
           <img
             src={feed?.image?.url || podcast.imageUrl}
             alt={podcast.title}
-            className="w-48 h-48 object-cover rounded-lg"
+            className="w-full md:w-48 h-48 object-cover rounded-lg"
           />
           <div>
-            <h1 className="text-4xl font-bold mb-2">{podcast.title}</h1>
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">{podcast.title}</h1>
             <p className="text-xl text-neutral-400 mb-4">{podcast.host}</p>
             <p className="text-neutral-400 max-w-2xl">{feed?.description || podcast.description}</p>
           </div>
@@ -94,15 +103,15 @@ export default function Episodes() {
             {feed.items.map((episode) => (
               <div
                 key={episode.guid}
-                className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 hover:bg-neutral-800/50 transition-colors"
+                className="bg-neutral-900 border border-neutral-800 rounded-lg p-4 sm:p-6 hover:bg-neutral-800/50 transition-colors"
               >
-                <div className="flex justify-between items-start mb-4">
-                  <div>
+                <div className="flex flex-col sm:flex-row sm:items-start gap-4 mb-4">
+                  <div className="flex-1">
                     <h3 className="text-xl font-semibold mb-2">{episode.title}</h3>
                     <p className="text-neutral-400">{episode.contentSnippet}</p>
                   </div>
                   <Button 
-                    className="bg-green-500 hover:bg-green-600 text-black"
+                    className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-black"
                     onClick={() => handleGetSummary(episode)}
                   >
                     Get Summary
@@ -128,6 +137,7 @@ export default function Episodes() {
           episodeId={selectedEpisode.id}
           episodeTitle={selectedEpisode.title}
           episodeContent={selectedEpisode.content}
+          audioUrl={selectedEpisode.audioUrl}
         />
       )}
     </div>

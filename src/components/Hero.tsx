@@ -1,11 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles, Clock, Headphones } from "lucide-react";
-import { useNavigate} from "react-router-dom";
-
-
+import { useNavigate } from "react-router-dom";
 
 export default function Hero() {
   const navigate = useNavigate();
+
   return (
     <section className="pt-32 pb-16 px-4">
       <div className="container mx-auto text-center">
@@ -16,7 +15,10 @@ export default function Hero() {
           Get instant summaries of your favorite NFL podcasts. Save time while staying informed.
         </p>
         
-        <Button onClick={() => navigate('/signup')} className="bg-green-500 hover:bg-green-600 text-black text-lg px-8 py-6 rounded-full">
+        <Button 
+          onClick={() => navigate('/signup')}
+          className="bg-green-500 hover:bg-green-600 text-black text-lg px-8 py-6 rounded-full"
+        >
           Try for free <ArrowRight className="ml-2" />
         </Button>
 
