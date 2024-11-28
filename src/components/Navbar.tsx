@@ -15,7 +15,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
 
   const scrollToSection = (sectionId: string) => {
     if (location.pathname !== '/') {
@@ -47,6 +47,10 @@ export default function Navbar() {
     { label: "Features", onClick: () => scrollToSection('features') },
     { label: "Pricing", onClick: () => scrollToSection('pricing') },
   ];
+
+  const handleUpgrade = () => {
+    scrollToSection('pricing');
+  };
 
   return (
     <header className="fixed top-0 w-full bg-black/95 border-b border-neutral-800 backdrop-blur-sm z-50">
@@ -88,8 +92,16 @@ export default function Navbar() {
           {user ? (
             <>
               <span className="text-sm text-neutral-400">
-                {user.email}
+                Hi, {user.email}
               </span>
+              {profile?.subscription_tier === 'free' && (
+                <Button
+                  className="bg-green-500 hover:bg-green-600 text-black"
+                  onClick={handleUpgrade}
+                >
+                  Upgrade
+                </Button>
+              )}
               <Button 
                 variant="ghost" 
                 className="text-sm hover:text-green-500"
@@ -155,6 +167,14 @@ export default function Navbar() {
                       <span className="text-sm text-neutral-400 py-2">
                         Hi, {user.email}
                       </span>
+                      {profile?.subscription_tier === 'free' && (
+                        <Button
+                          className="w-full justify-start text-lg bg-green-500 hover:bg-green-600 text-black"
+                          onClick={handleUpgrade}
+                        >
+                          Upgrade
+                        </Button>
+                      )}
                       <Button 
                         variant="ghost" 
                         className="w-full justify-start text-lg hover:text-green-500"

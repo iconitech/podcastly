@@ -27,21 +27,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return;
       
-      setUser(session?.user ?? null);
       if (session?.user) {
+        setUser(session.user);
         getProfile(session.user.id)
           .then(profile => {
             if (mounted) {
               setProfile(profile);
             }
           })
-          .catch(console.error)
+          .catch(error => {
+            console.error('Error fetching profile:', error);
+          })
           .finally(() => {
             if (mounted) {
               setIsLoading(false);
             }
           });
       } else {
+        setUser(null);
+        setProfile(null);
         setIsLoading(false);
       }
     });
@@ -50,18 +54,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 
-      setUser(session?.user ?? null);
-      
-      if (event === 'SIGNED_IN' && session?.user) {
+      if (session?.user) {
+        setUser(session.user);
         try {
           const profile = await getProfile(session.user.id);
-          setProfile(profile);
+          if (mounted) {
+            setProfile(profile);
+          }
         } catch (error) {
           console.error('Error fetching profile:', error);
         }
-      } else if (event === 'SIGNED_OUT') {
+      } else {
+        setUser(null);
         setProfile(null);
-        navigate('/', { replace: true });
+        if (event === 'SIGNED_OUT') {
+          navigate('/', { replace: true });
+        }
       }
     });
 
