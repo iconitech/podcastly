@@ -9,6 +9,7 @@ import PricingSection from './components/PricingSection';
 import Footer from './components/Footer';
 import Episodes from './pages/Episodes';
 import Podcasts from './pages/Podcasts';
+import MySummaries from './pages/MySummaries';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import AuthCallback from './pages/AuthCallback';
@@ -46,6 +47,11 @@ function App() {
               } />
               <Route path="/podcasts" element={<Podcasts />} />
               <Route path="/podcasts/:podcastId" element={<Episodes />} />
+              <Route path="/my-summaries" element={
+                <AuthGuard>
+                  <MySummaries />
+                </AuthGuard>
+              } />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/auth/callback" element={<AuthCallback />} />

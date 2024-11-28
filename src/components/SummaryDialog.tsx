@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -39,9 +39,21 @@ export default function SummaryDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [streamedContent, setStreamedContent] = useState('');
+  const [progress, setProgress] = useState(0);
+  const [existingSummary, setExistingSummary] = useState<boolean>(false);
 
   const isPremium = profile?.subscription_tier === 'premium';
+
+  useEffect(() => {
+    if (user && episodeId) {
+      getEpisodeSummary(user.id, episodeId).then((data) => {
+        if (data?.summary_text) {
+          setSummary(data.summary_text);
+          setExistingSummary(true);
+        }
+      });
+    }
+  }, [user, episodeId]);
 
   const handleGetSummary = async () => {
     if (!user) return;
@@ -49,14 +61,7 @@ export default function SummaryDialog({
     try {
       setIsLoading(true);
       setError(null);
-      setStreamedContent('');
-
-      // Check if summary already exists
-      const existingSummary = await getEpisodeSummary(user.id, episodeId);
-      if (existingSummary) {
-        setSummary(existingSummary.summary_text);
-        return;
-      }
+      setProgress(0);
 
       // Check credits for free users
       if (!isPremium) {
@@ -67,6 +72,8 @@ export default function SummaryDialog({
         }
       }
 
+      let summaryText = '';
+      
       // Process the podcast episode with streaming
       await processPodcastEpisode({
         audioUrl,
@@ -74,24 +81,40 @@ export default function SummaryDialog({
         stream: true,
         callbacks: {
           onToken: (token) => {
-            setStreamedContent(prev => prev + token);
+            summaryText += token;
+            setSummary(summaryText);
+          },
+          onProgress: (percent) => {
+            setProgress(percent);
           },
           onComplete: async () => {
-            // Save summary
-            await createSummary({
-              user_id: user.id,
-              podcast_id: podcastId,
-              episode_id: episodeId,
-              summary_text: streamedContent,
-              key_points: null
-            });
+            try {
+              // Only save and count if we have a valid summary
+              if (summaryText.trim()) {
+                // Save summary
+                await createSummary({
+                  user_id: user.id,
+                  podcast_id: podcastId,
+                  episode_id: episodeId,
+                  summary_text: summaryText,
+                  key_points: null
+                });
 
-            // Increment usage count for free users
-            if (!isPremium) {
-              await incrementSummaryCount(user.id);
+                // Increment usage count for free users
+                if (!isPremium) {
+                  await incrementSummaryCount(user.id);
+                }
+
+                setExistingSummary(true);
+              }
+            } catch (err) {
+              console.error('Error saving summary:', err);
+              toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Failed to save summary. Please try again.",
+              });
             }
-
-            setSummary(streamedContent);
             setIsLoading(false);
           },
           onError: (error) => {
@@ -107,7 +130,7 @@ export default function SummaryDialog({
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to generate summary. Please try again later.",
+        description: "Failed to generate summary. Please try again.",
       });
       setIsLoading(false);
     }
@@ -136,11 +159,19 @@ export default function SummaryDialog({
             </div>
             <p className="text-neutral-400">{error}</p>
           </div>
-        ) : summary || streamedContent ? (
+        ) : summary ? (
           <div className="space-y-4">
             <h3 className="font-semibold">{episodeTitle}</h3>
+            {isLoading && (
+              <div className="w-full bg-neutral-800 rounded-full h-2 mb-4">
+                <div 
+                  className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            )}
             <div className="prose prose-invert max-w-none">
-              {(summary || streamedContent).split('\n').map((paragraph, index) => (
+              {summary.split('\n').map((paragraph, index) => (
                 <p key={index} className="text-neutral-300">
                   {paragraph}
                 </p>
@@ -164,8 +195,10 @@ export default function SummaryDialog({
               {isLoading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2" />
-                  Generating...
+                  Generating... {progress}%
                 </>
+              ) : existingSummary ? (
+                'View Summary'
               ) : (
                 'Generate Summary'
               )}

@@ -6,20 +6,16 @@ import {
   Sheet,
   SheetContent,
   SheetTrigger,
-  SheetClose,
 } from "@/components/ui/sheet";
 import { Mic2 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { signOut } from "@/lib/auth";
-import { useToast } from "@/hooks/use-toast";
 
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const { user, profile } = useAuth();
-  const { toast } = useToast();
+  const { user, signOut } = useAuth();
 
   const scrollToSection = (sectionId: string) => {
     if (location.pathname !== '/') {
@@ -39,23 +35,15 @@ export default function Navbar() {
   const handleSignOut = async () => {
     try {
       await signOut();
-      toast({
-        title: "Signed out",
-        description: "You have been successfully signed out.",
-      });
       navigate('/');
     } catch (error) {
-      console.error('Sign out error:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to sign out. Please try again.",
-      });
+      console.error('Error signing out:', error);
     }
   };
 
   const navItems = [
     { label: "Podcasts", href: "/podcasts" },
+    { label: "My Summaries", href: "/my-summaries", authRequired: true },
     { label: "Features", onClick: () => scrollToSection('features') },
     { label: "Pricing", onClick: () => scrollToSection('pricing') },
   ];
@@ -73,20 +61,22 @@ export default function Navbar() {
           <NavigationMenuList className="space-x-6">
             {navItems.map((item) => (
               <NavigationMenuItem key={item.label}>
-                {item.href ? (
-                  <Link
-                    to={item.href}
-                    className="text-sm hover:text-green-500 transition-colors"
-                  >
-                    {item.label}
-                  </Link>
-                ) : (
-                  <button
-                    onClick={item.onClick}
-                    className="text-sm hover:text-green-500 transition-colors"
-                  >
-                    {item.label}
-                  </button>
+                {item.authRequired && !user ? null : (
+                  item.href ? (
+                    <Link
+                      to={item.href}
+                      className="text-sm hover:text-green-500 transition-colors"
+                    >
+                      {item.label}
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={item.onClick}
+                      className="text-sm hover:text-green-500 transition-colors"
+                    >
+                      {item.label}
+                    </button>
+                  )
                 )}
               </NavigationMenuItem>
             ))}
@@ -98,23 +88,14 @@ export default function Navbar() {
           {user ? (
             <>
               <span className="text-sm text-neutral-400">
-                Hi, {user.email}
+                {user.email}
               </span>
-              {!profile?.subscription_tier || profile.subscription_tier === 'free' ? (
-                <Button 
-                  variant="outline"
-                  className="text-green-500 border-green-500 hover:bg-green-500 hover:text-black"
-                  onClick={() => scrollToSection('pricing')}
-                >
-                  Upgrade
-                </Button>
-              ) : null}
               <Button 
                 variant="ghost" 
                 className="text-sm hover:text-green-500"
                 onClick={handleSignOut}
               >
-                Sign out
+                Sign Out
               </Button>
             </>
           ) : (
@@ -148,21 +129,23 @@ export default function Navbar() {
               <nav className="flex flex-col gap-4">
                 {navItems.map((item) => (
                   <div key={item.label}>
-                    {item.href ? (
-                      <Link
-                        to={item.href}
-                        className="block py-2 text-lg hover:text-green-500 transition-colors"
-                        onClick={() => setIsOpen(false)}
-                      >
-                        {item.label}
-                      </Link>
-                    ) : (
-                      <button
-                        onClick={item.onClick}
-                        className="block w-full text-left py-2 text-lg hover:text-green-500 transition-colors"
-                      >
-                        {item.label}
-                      </button>
+                    {item.authRequired && !user ? null : (
+                      item.href ? (
+                        <Link
+                          to={item.href}
+                          className="block py-2 text-lg hover:text-green-500 transition-colors"
+                          onClick={() => setIsOpen(false)}
+                        >
+                          {item.label}
+                        </Link>
+                      ) : (
+                        <button
+                          onClick={item.onClick}
+                          className="block w-full text-left py-2 text-lg hover:text-green-500 transition-colors"
+                        >
+                          {item.label}
+                        </button>
+                      )
                     )}
                   </div>
                 ))}
@@ -170,29 +153,14 @@ export default function Navbar() {
                   {user ? (
                     <>
                       <span className="text-sm text-neutral-400 py-2">
-                        Hi, {user.email}
+                        {user.email}
                       </span>
-                      {!profile?.subscription_tier || profile.subscription_tier === 'free' ? (
-                        <Button 
-                          variant="outline"
-                          className="w-full justify-start text-lg text-green-500 border-green-500 hover:bg-green-500 hover:text-black"
-                          onClick={() => {
-                            setIsOpen(false);
-                            scrollToSection('pricing');
-                          }}
-                        >
-                          Upgrade to Premium
-                        </Button>
-                      ) : null}
                       <Button 
                         variant="ghost" 
                         className="w-full justify-start text-lg hover:text-green-500"
-                        onClick={() => {
-                          setIsOpen(false);
-                          handleSignOut();
-                        }}
+                        onClick={handleSignOut}
                       >
-                        Sign out
+                        Sign Out
                       </Button>
                     </>
                   ) : (
