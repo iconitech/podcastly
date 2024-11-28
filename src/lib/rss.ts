@@ -30,26 +30,10 @@ function cleanText(text: string): string {
   return div.textContent || div.innerText || '';
 }
 
-function cleanDuration(duration: string): string {
-  // If duration is in seconds (numeric string)
-  if (/^\d+$/.test(duration)) {
-    const totalSeconds = parseInt(duration, 10);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  }
-
-  // If duration is already in HH:MM:SS or MM:SS format, return as is
-  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(duration)) {
-    return duration;
-  }
-
-  // Default to 0:00 if no valid format is found
-  return '0:00';
-}
-
 export async function getPodcastFeed(podcastId: string, feedUrl: string): Promise<PodcastFeed> {
   try {
+    console.log('Fetching podcast feed:', podcastId);
+
     // Try cache first
     const { data: cached, error: cacheError } = await supabase
       .from('podcast_feeds')
@@ -70,11 +54,17 @@ export async function getPodcastFeed(podcastId: string, feedUrl: string): Promis
 
     // Fetch feed
     const response = await fetch(CORS_PROXY + encodeURIComponent(feedUrl));
-    if (!response.ok) throw new Error('Failed to fetch feed');
+    if (!response.ok) {
+      throw new Error(`Failed to fetch feed: ${response.status} ${response.statusText}`);
+    }
     
     const xmlText = await response.text();
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+
+    if (xmlDoc.querySelector('parsererror')) {
+      throw new Error('Failed to parse XML feed');
+    }
 
     // Parse feed
     const feed: PodcastFeed = {
@@ -86,6 +76,9 @@ export async function getPodcastFeed(podcastId: string, feedUrl: string): Promis
       items: Array.from(xmlDoc.querySelectorAll('item'))
         .slice(0, MAX_EPISODES)
         .map(item => {
+          const enclosure = item.querySelector('enclosure');
+          const audioUrl = enclosure?.getAttribute('url') || '';
+          
           // Get duration using getElementsByTagName for better namespace handling
           const durationElement = item.getElementsByTagName('itunes:duration')[0];
           const duration = durationElement?.textContent?.trim() || '0';
@@ -93,14 +86,14 @@ export async function getPodcastFeed(podcastId: string, feedUrl: string): Promis
           return {
             title: cleanText(item.querySelector('title')?.textContent || ''),
             pubDate: item.querySelector('pubDate')?.textContent || '',
-            guid: item.querySelector('guid')?.textContent?.trim() || '',
+            guid: cleanText(item.querySelector('guid')?.textContent || ''),
             contentSnippet: cleanText(
               item.querySelector('description')?.textContent || 
               item.querySelector('content\\:encoded')?.textContent || ''
             ),
-            audioUrl: item.querySelector('enclosure')?.getAttribute('url') || '',
+            audioUrl,
             itunes: {
-              duration: cleanDuration(duration),
+              duration,
               summary: cleanText(item.querySelector('itunes\\:summary')?.textContent || ''),
               explicit: item.querySelector('itunes\\:explicit')?.textContent || 'no',
               image: item.querySelector('itunes\\:image')?.getAttribute('href') || ''
@@ -122,6 +115,8 @@ export async function getPodcastFeed(podcastId: string, feedUrl: string): Promis
 
     if (upsertError) {
       console.error('Error updating feed cache:', upsertError);
+    } else {
+      console.log('Successfully cached feed for podcast:', podcastId);
     }
 
     return feed;
