@@ -1,15 +1,17 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { getProfile } from '@/lib/db/profiles';
 import type { Profile } from '@/types/supabase';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   isLoading: boolean;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,39 +21,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
-  // Function to fetch profile
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string) => {
     try {
+      console.log('Fetching profile for user:', userId);
       const profile = await getProfile(userId);
-      console.log('Fetched profile:', profile);
+      console.log('Profile fetched:', profile);
       setProfile(profile);
     } catch (error) {
       console.error('Error fetching profile:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load user profile. Please try logging in again.",
+      });
     }
-  };
+  }, [toast]);
 
-  // Function to handle sign out
+  const refreshProfile = useCallback(async () => {
+    if (user) {
+      await fetchProfile(user.id);
+    }
+  }, [user, fetchProfile]);
+
   const handleSignOut = async () => {
     try {
+      setIsLoading(true);
       console.log('Starting sign out process...');
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      console.log('Successfully signed out');
       setUser(null);
       setProfile(null);
+      console.log('Successfully signed out');
       navigate('/', { replace: true });
     } catch (error) {
       console.error('Error signing out:', error);
-      throw error;
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to sign out. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
     let mounted = true;
 
-    // Get initial session
     const initializeAuth = async () => {
       try {
         console.log('Initializing auth...');
@@ -78,11 +97,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initializeAuth();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
-
       console.log('Auth state changed:', event, session?.user?.email);
+
+      if (!mounted) return;
 
       if (event === 'SIGNED_IN' && session?.user) {
         setUser(session.user);
@@ -92,6 +110,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(null);
         console.log('User signed out, redirecting to home');
         navigate('/', { replace: true });
+      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+        setUser(session.user);
       }
     });
 
@@ -100,13 +120,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, fetchProfile, toast]);
 
   const value = {
     user,
     profile,
     isLoading,
     signOut: handleSignOut,
+    refreshProfile
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

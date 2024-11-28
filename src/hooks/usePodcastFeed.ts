@@ -1,39 +1,44 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getPodcastFeed, type PodcastFeed } from '@/lib/rss';
+import { useToast } from '@/hooks/use-toast';
 
 export function usePodcastFeed(podcastId: string, feedUrl: string) {
   const [feed, setFeed] = useState<PodcastFeed | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const { toast } = useToast();
+
+  const fetchFeed = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      console.log('Fetching feed for podcast:', podcastId);
+      const feedData = await getPodcastFeed(podcastId, feedUrl);
+      setFeed(feedData);
+    } catch (err) {
+      console.error('Error fetching feed:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch feed'));
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load podcast episodes. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [podcastId, feedUrl, toast]);
 
   useEffect(() => {
     let mounted = true;
 
-    async function fetchFeed() {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const feedData = await getPodcastFeed(podcastId, feedUrl);
-        if (mounted) {
-          setFeed(feedData);
-        }
-      } catch (err) {
-        if (mounted) {
-          setError(err instanceof Error ? err : new Error('Failed to fetch feed'));
-        }
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
-        }
-      }
+    if (mounted) {
+      fetchFeed();
     }
-
-    fetchFeed();
 
     return () => {
       mounted = false;
     };
-  }, [podcastId, feedUrl]);
+  }, [fetchFeed]);
 
-  return { feed, isLoading, error };
+  return { feed, isLoading, error, refetch: fetchFeed };
 }
