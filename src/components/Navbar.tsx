@@ -153,7 +153,7 @@ export default function Navbar() {
                   {user ? (
                     <>
                       <span className="text-sm text-neutral-400 py-2">
-                        {user.email}
+                        Hi, {user.email}
                       </span>
                       <Button 
                         variant="ghost" 
