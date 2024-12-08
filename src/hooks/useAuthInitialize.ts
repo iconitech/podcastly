@@ -20,7 +20,6 @@ export function useAuthInitialize() {
 
     const fetchProfile = async (userId: string) => {
       try {
-        console.log('Fetching profile for user:', userId);
         const profile = await getProfile(userId);
         if (mounted) {
           setProfile(profile);
@@ -38,32 +37,25 @@ export function useAuthInitialize() {
     };
 
     const initializeAuth = async () => {
-      // Skip if already initialized
       if (initRef.current) {
         setIsLoading(false);
         return;
       }
 
       try {
-        console.log('Initializing auth...');
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (error) throw error;
         if (!mounted) return;
 
         if (session?.user) {
-          console.log('Initial session found:', session.user.email);
           setUser(session.user);
           await fetchProfile(session.user.id);
-        } else {
-          console.log('No initial session found');
         }
 
-        // Mark as initialized globally and locally
         isInitialized = true;
         initRef.current = true;
       } catch (error) {
-        console.error('Error getting initial session:', error);
+        console.error('Error initializing auth:', error);
       } finally {
         if (mounted) {
           setIsLoading(false);
@@ -73,11 +65,8 @@ export function useAuthInitialize() {
 
     initializeAuth();
 
-    // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
-
-      console.log('Auth state changed:', event, session?.user?.email);
 
       if (event === 'SIGNED_IN' && session?.user) {
         setUser(session.user);
@@ -85,8 +74,6 @@ export function useAuthInitialize() {
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setProfile(null);
-      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-        setUser(session.user);
       }
     });
 

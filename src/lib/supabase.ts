@@ -14,11 +14,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     storageKey: 'podcastai-auth',
     storage: window.localStorage,
     autoRefreshToken: true,
-    detectSessionInUrl: true
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 2
-    }
+    detectSessionInUrl: true,
+    flowType: 'pkce'
   }
 });
